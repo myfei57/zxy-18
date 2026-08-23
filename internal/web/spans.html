@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>TraceFlow · 链路采样</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #1f2937; }
+    nav a { margin-right: 1rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    th, td { border: 1px solid #d1d5db; padding: 0.4rem 0.6rem; text-align: left; font-size: 0.9rem; }
+    code { background: #f3f4f6; padding: 0.1rem 0.3rem; }
+  </style>
+</head>
+<body>
+  <h1>TraceFlow 链路采样台</h1>
+  <nav>
+    <a href="/spans">Span</a>
+    <a href="/report">上报</a>
+    <a href="/aggregate">聚合</a>
+    <a href="/audit">审计</a>
+  </nav>
+  <p>命名空间：<span id="namespaces">-</span> ｜ 采样率：<span id="rate">-</span> ｜ 采样：<span id="sampled">-</span> ｜ 拒绝：<span id="rejected">-</span></p>
+  <table id="spans">
+    <thead><tr><th>span_id</th><th>trace_id</th><th>服务</th><th>操作</th><th>状态</th><th>seq</th><th>payload</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <script>
+    async function load() {
+      const namespaces = await (await fetch("/api/namespaces")).json();
+      document.getElementById("namespaces").textContent = namespaces.map(n => n.name).join(", ");
+      const sample = await (await fetch("/api/sample/status")).json();
+      document.getElementById("rate").textContent = sample.rate + "%";
+      document.getElementById("sampled").textContent = sample.sampled;
+      document.getElementById("rejected").textContent = sample.rejected;
+      const ns = namespaces.length ? namespaces[0].name : "";
+      const spans = await (await fetch("/api/spans?namespace=" + encodeURIComponent(ns) + "&limit=100")).json();
+      const body = document.querySelector("#spans tbody");
+      body.innerHTML = "";
+      for (const span of spans) {
+        const row = document.createElement("tr");
+        row.innerHTML = "<td><code>" + span.span_id + "</code></td><td><code>" + span.trace_id + "</code></td><td>" + span.service + "</td><td>" + span.operation + "</td><td>" + span.status + "</td><td>" + span.seq + "</td><td>" + span.payload_bytes + "</td>";
+        body.appendChild(row);
+      }
+    }
+    load();
+  </script>
+</body>
+</html>
