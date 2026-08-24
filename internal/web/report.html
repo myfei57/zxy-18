@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>TraceFlow · 批次上报</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #1f2937; }
+    nav a { margin-right: 1rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    th, td { border: 1px solid #d1d5db; padding: 0.4rem 0.6rem; text-align: left; font-size: 0.9rem; }
+    button { margin-right: 0.6rem; }
+    code { background: #f3f4f6; padding: 0.1rem 0.3rem; }
+  </style>
+</head>
+<body>
+  <h1>TraceFlow 上报台</h1>
+  <nav>
+    <a href="/spans">Span</a>
+    <a href="/report">上报</a>
+    <a href="/aggregate">聚合</a>
+    <a href="/audit">审计</a>
+  </nav>
+  <div>
+    <button onclick="run('/api/report/flush')">本地落盘一批</button>
+    <button onclick="run('/api/report/send')">推送下游并确认</button>
+    <button onclick="run('/api/maintenance')">执行全链路维护</button>
+  </div>
+  <p>游标：<span id="cursors">-</span> ｜ 待上报：<span id="pending">-</span></p>
+  <table id="batches">
+    <thead><tr><th>批次</th><th>命名空间</th><th>span 数</th><th>ack</th><th>创建时间</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <script>
+    async function run(path) {
+      const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      document.getElementById("cursors").textContent = res.status + " " + (await res.text());
+      load();
+    }
+    async function load() {
+      const status = await (await fetch("/api/report/status")).json();
+      document.getElementById("cursors").textContent = JSON.stringify(status.cursors);
+      const pending = Object.values(status.pending_spans).reduce((a, b) => a + b, 0);
+      document.getElementById("pending").textContent = pending;
+      const body = document.querySelector("#batches tbody");
+      body.innerHTML = "";
+      for (const view of status.batches) {
+        const row = document.createElement("tr");
+        row.innerHTML = "<td><code>" + view.batch.id + "</code></td><td>" + view.batch.namespace + "</td><td>" + view.batch.spans.length + "</td><td>" + (view.acked ? "已确认" : "未确认") + "</td><td>" + view.batch.created_at + "</td>";
+        body.appendChild(row);
+      }
+    }
+    load();
+  </script>
+</body>
+</html>
