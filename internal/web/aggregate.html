@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>TraceFlow · 链路聚合</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #1f2937; }
+    nav a { margin-right: 1rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    th, td { border: 1px solid #d1d5db; padding: 0.4rem 0.6rem; text-align: left; font-size: 0.9rem; }
+    code { background: #f3f4f6; padding: 0.1rem 0.3rem; }
+  </style>
+</head>
+<body>
+  <h1>TraceFlow 聚合台</h1>
+  <nav>
+    <a href="/spans">Span</a>
+    <a href="/report">上报</a>
+    <a href="/aggregate">聚合</a>
+    <a href="/audit">审计</a>
+  </nav>
+  <p>索引代际：<span id="generation">-</span> ｜ 已索引链路：<span id="traces">-</span></p>
+  <h2>窗口汇总</h2>
+  <table id="summaries">
+    <thead><tr><th>窗口</th><th>命名空间</th><th>span</th><th>trace</th><th>已完成</th><th>关闭时间</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <h2>聚合结果</h2>
+  <table id="results">
+    <thead><tr><th>trace_id</th><th>命名空间</th><th>根 span</th><th>span 数</th><th>状态</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <script>
+    async function load() {
+      const stats = await (await fetch("/api/index/status")).json();
+      document.getElementById("generation").textContent = stats.generation;
+      document.getElementById("traces").textContent = stats.trace_count;
+      const summaries = await (await fetch("/api/aggregate/summaries?limit=50")).json();
+      const sbody = document.querySelector("#summaries tbody");
+      sbody.innerHTML = "";
+      for (const summary of summaries) {
+        const row = document.createElement("tr");
+        row.innerHTML = "<td><code>" + summary.window_id + "</code></td><td>" + summary.namespace + "</td><td>" + summary.span_count + "</td><td>" + summary.trace_count + "</td><td>" + summary.finished_count + "</td><td>" + summary.closed_at + "</td>";
+        sbody.appendChild(row);
+      }
+      const results = await (await fetch("/api/aggregate/results?limit=50")).json();
+      const rbody = document.querySelector("#results tbody");
+      rbody.innerHTML = "";
+      for (const result of results) {
+        const row = document.createElement("tr");
+        row.innerHTML = "<td><code>" + result.trace_id + "</code></td><td>" + result.namespace + "</td><td><code>" + result.root_span_id + "</code></td><td>" + result.span_count + "</td><td>" + result.state + "</td>";
+        rbody.appendChild(row);
+      }
+    }
+    load();
+  </script>
+</body>
+</html>
