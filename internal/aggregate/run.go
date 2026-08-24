@@ -20,10 +20,11 @@ func (a *Aggregator) Run(namespace, traceID string) (Result, error) {
 		return Result{}, err
 	}
 	result := BuildResult(tr, spans)
-	if err := a.cursor.Advance(namespace, maxSeq(spans)); err != nil {
+	if err := a.writeResult(result); err != nil {
+		a.audit.Record(audit.NewEvent(audit.KindAggregate, namespace, traceID, "failed"))
 		return Result{}, err
 	}
-	if err := a.writeResult(result); err != nil {
+	if err := a.cursor.Advance(namespace, maxSeq(spans)); err != nil {
 		a.audit.Record(audit.NewEvent(audit.KindAggregate, namespace, traceID, "failed"))
 		return Result{}, err
 	}
