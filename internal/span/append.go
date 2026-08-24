@@ -29,12 +29,15 @@ func (st *Store) Append(s Span) (uint64, error) {
 	}
 	st.mu.Lock()
 	defer st.mu.Unlock()
+	// Reject before the durable write so an over-limit namespace cannot grow
+	// its journal. The check runs under st.mu, making check-then-write atomic
+	// with respect to concurrent Appends on the same store.
+	if err := st.quota.Check(s.Namespace, 1); err != nil {
+		return 0, err
+	}
 	s.Seq = st.nextSeqLocked(s.Namespace)
 	seq, err := st.appendRecordLocked(s.Namespace, journalRecord{Kind: "span", Span: s})
 	if err != nil {
-		return 0, err
-	}
-	if err := st.quota.Check(s.Namespace, 1); err != nil {
 		return 0, err
 	}
 	st.spans[s.Namespace] = append(st.spans[s.Namespace], s)
