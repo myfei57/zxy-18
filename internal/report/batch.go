@@ -39,11 +39,11 @@ func (r *Reporter) Flush(namespace string) (Batch, error) {
 		return Batch{}, nil
 	}
 	batch := BuildBatch(namespace, pending)
-	if err := r.cursor.Advance(namespace, pending[len(pending)-1].Seq); err != nil {
-		return Batch{}, err
-	}
 	if err := r.writeBatch(batch); err != nil {
 		r.audit.Record(audit.NewEvent(audit.KindReport, namespace, batch.ID, "failed"))
+		return Batch{}, err
+	}
+	if err := r.cursor.Advance(namespace, pending[len(pending)-1].Seq); err != nil {
 		return Batch{}, err
 	}
 	r.audit.Record(audit.NewEvent(audit.KindReport, namespace, batch.ID, "ok"))
