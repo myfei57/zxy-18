@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>TraceFlow · 审计</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #1f2937; }
+    nav a { margin-right: 1rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    th, td { border: 1px solid #d1d5db; padding: 0.4rem 0.6rem; text-align: left; font-size: 0.9rem; }
+    code { background: #f3f4f6; padding: 0.1rem 0.3rem; }
+  </style>
+</head>
+<body>
+  <h1>TraceFlow 审计台</h1>
+  <nav>
+    <a href="/spans">Span</a>
+    <a href="/report">上报</a>
+    <a href="/aggregate">聚合</a>
+    <a href="/audit">审计</a>
+  </nav>
+  <p>事件统计：<span id="stats">-</span></p>
+  <table id="events">
+    <thead><tr><th>事件 ID</th><th>类型</th><th>命名空间</th><th>目标</th><th>结果</th><th>时间</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <script>
+    async function load() {
+      const stats = await (await fetch("/api/audit/stats")).json();
+      document.getElementById("stats").textContent = JSON.stringify(stats);
+      const events = await (await fetch("/api/audit?limit=100")).json();
+      const body = document.querySelector("#events tbody");
+      body.innerHTML = "";
+      for (const event of events) {
+        const row = document.createElement("tr");
+        row.innerHTML = "<td><code>" + event.id + "</code></td><td>" + event.kind + "</td><td>" + (event.namespace || "-") + "</td><td>" + (event.target || "-") + "</td><td>" + event.result + "</td><td>" + event.at + "</td>";
+        body.appendChild(row);
+      }
+    }
+    load();
+  </script>
+</body>
+</html>
